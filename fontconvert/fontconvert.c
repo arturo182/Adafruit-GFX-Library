@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 	// Insert font size and 7/8 bit.  fontName was alloc'd w/extra
 	// space to allow this, we're not sprintfing into Forbidden Zone.
 	sprintf(ptr, "%dpt%db", size, (last > 127) ? 8 : 7);
-	// Space and punctuation chars in name replaced w/ underscores.  
+	// Space and punctuation chars in name replaced w/ underscores.
 	for(i=0; (c=fontName[i]); i++) {
 		if(isspace(c) || ispunct(c)) fontName[i] = '_';
 	}
@@ -131,7 +131,8 @@ int main(int argc, char *argv[]) {
 	// the right symbols, and that's not done yet.
 	// fprintf(stderr, "%ld glyphs\n", face->num_glyphs);
 
-	printf("const uint8_t %sBitmaps[] PROGMEM = {\n  ", fontName);
+	printf("%s = font()\n", fontName);
+	printf("%s.bitmap = [\n  ", fontName);
 
 	// Process glyphs and output huge bitmap data array
 	for(i=first, j=0; i<=last; i++, j++) {
@@ -194,12 +195,12 @@ int main(int argc, char *argv[]) {
 		FT_Done_Glyph(glyph);
 	}
 
-	printf(" };\n\n"); // End bitmap array
+	printf("]\n\n"); // End bitmap array
 
 	// Output glyph attributes table (one per character)
-	printf("const GFXglyph %sGlyphs[] PROGMEM = {\n", fontName);
+	printf("%s.glyph = [\n", fontName);
 	for(i=first, j=0; i<=last; i++, j++) {
-		printf("  { %5d, %3d, %3d, %3d, %4d, %4d }",
+		printf("  font_glyph(%5d, %3d, %3d, %3d, %4d, %4d)",
 		  table[j].bitmapOffset,
 		  table[j].width,
 		  table[j].height,
@@ -207,30 +208,27 @@ int main(int argc, char *argv[]) {
 		  table[j].xOffset,
 		  table[j].yOffset);
 		if(i < last) {
-			printf(",   // 0x%02X", i);
+			printf(",   # 0x%02X", i);
 			if((i >= ' ') && (i <= '~')) {
 				printf(" '%c'", i);
 			}
 			putchar('\n');
 		}
 	}
-	printf(" }; // 0x%02X", last);
+	printf("]  # 0x%02X", last);
 	if((last >= ' ') && (last <= '~')) printf(" '%c'", last);
 	printf("\n\n");
 
 	// Output font structure
-	printf("const GFXfont %s PROGMEM = {\n", fontName);
-	printf("  (uint8_t  *)%sBitmaps,\n", fontName);
-	printf("  (GFXglyph *)%sGlyphs,\n", fontName);
+	printf("%s.first = 0x%02X\n", fontName, first);
+	printf("%s.last = 0x%02X\n", fontName, last);
 	if (face->size->metrics.height == 0) {
       // No face height info, assume fixed width and get from a glyph.
-		printf("  0x%02X, 0x%02X, %d };\n\n",
-			first, last, table[0].height);
+		printf("%s.y_advance = %d\n\n",fontName, table[0].height);
 	} else {
-		printf("  0x%02X, 0x%02X, %ld };\n\n",
-			first, last, face->size->metrics.height >> 6);
+		printf("%s.y_advance = %ld\n\n", fontName, face->size->metrics.height >> 6);
 	}
-	printf("// Approx. %d bytes\n",
+	printf("# Approx. %d bytes\n",
 	  bitmapOffset + (last - first + 1) * 7 + 7);
 	// Size estimate is based on AVR struct and pointer sizes;
 	// actual size may vary.
